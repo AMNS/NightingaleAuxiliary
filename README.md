@@ -1,0 +1,4 @@
+NightingaleAuxiliary
+====================
+
+Nightingale supplemental programs.
