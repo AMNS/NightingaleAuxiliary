@@ -89,9 +89,26 @@ QUICKSTART:
   3. Inside Tiger:
      - Open Safari → http://10.0.2.2:8000 (or try localhost:8000)
      - Download Nightingale.app.zip → /Applications
-     - Download Sonata.ttf → /Library/Fonts
+     - Download Briard.ttf (or Sonata.ttf if available)
+     - Download BMPFileDistribution.zip → extract to /Library/Application Support
      - RESTART TIGER (critical for fonts!)
      - Launch Nightingale from Applications
+
+INSTALLING FONTS IN TIGER:
+  Font Book GUI method (recommended):
+  1. Download font file (Briard.ttf or Sonata.ttf)
+  2. Open Font Book (/Applications/Font Book.app)
+  3. Right-click "Computer" in left panel → "Add Fonts..."
+  4. Select the .ttf file from Downloads
+  5. Click "Open"
+  6. Restart Tiger or restart Nightingale
+
+  Manual method (alternative):
+  1. Download font file
+  2. Open Finder → Go → Go to Folder
+  3. Type: /Library/Fonts
+  4. Drag and drop .ttf file into Fonts folder
+  5. Restart Tiger or restart Nightingale
 
 TIGER LOGIN:
   Username: Tim Cook
@@ -414,12 +431,15 @@ NIGHTINGALE_APP="$WORK_DIR/shared/Nightingale.app"
 if [ "$LAUNCH" != "1" ] && [ ! -f "$WORK_DIR/shared/Nightingale.app.zip" ]; then
     if [ ! -d "$NIGHTINGALE_APP" ]; then
         echo ""
-        echo -e "${YELLOW}Downloading Nightingale 5.6...${NC}"
-        NGALE_ZIP="$WORK_DIR/downloads/Nightingale5p6.app.zip"
+        echo -e "${YELLOW}Downloading Nightingale (PPC build from develop)...${NC}"
+        NGALE_ZIP="$WORK_DIR/downloads/NightingalePPC.app.zip"
 
         if [ ! -f "$NGALE_ZIP" ]; then
             wget -q --show-progress -O "$NGALE_ZIP" \
-                "https://github.com/AMNS/Nightingale/raw/develop/Nightingale5p6.app.zip"
+                "https://github.com/AMNS/Nightingale/raw/refs/heads/develop/NightingalePPC.app.zip" 2>/dev/null || \
+            # Fallback to 5.6 release if develop not available
+            wget -q --show-progress -O "$NGALE_ZIP" \
+                "https://github.com/AMNS/Nightingale/releases/download/v5.6/Nightingale5p6.app.zip" 2>/dev/null
         fi
 
         if [ -f "$NGALE_ZIP" ]; then
@@ -427,7 +447,9 @@ if [ "$LAUNCH" != "1" ] && [ ! -f "$WORK_DIR/shared/Nightingale.app.zip" ]; then
             unzip -q "$NGALE_ZIP" -d "$WORK_DIR/shared/"
 
             # Find and detect app name
-            if [ -d "$WORK_DIR/shared/Nightingale5p6.app" ]; then
+            if [ -d "$WORK_DIR/shared/NightingalePPC.app" ]; then
+                mv "$WORK_DIR/shared/NightingalePPC.app" "$NIGHTINGALE_APP"
+            elif [ -d "$WORK_DIR/shared/Nightingale5p6.app" ]; then
                 mv "$WORK_DIR/shared/Nightingale5p6.app" "$NIGHTINGALE_APP"
             elif [ -d "$WORK_DIR/shared/Nightingale.app" ]; then
                 true
@@ -448,17 +470,82 @@ if [ "$LAUNCH" != "1" ] && [ ! -f "$WORK_DIR/shared/Nightingale.app.zip" ]; then
 fi
 
 # =============================================================================
-# Sonata font (user-provided)
+# BMP files (for Nightingale 6 UI palette and dialogs)
 # =============================================================================
 
 echo ""
-echo -e "${YELLOW}Sonata font${NC}"
+echo -e "${YELLOW}BMP files (Nightingale 6 UI)${NC}"
+
+BMP_DIR="$WORK_DIR/shared/BMP"
+mkdir -p "$BMP_DIR"
+
+BMP_FILES=(
+    "Duration_2dotsNB1b.bmp"
+    "DynamicsNB1b.bmp"
+    "NRModifierNB1b.bmp"
+    "ToolPaletteNB1b.bmp"
+)
+
+BMP_GITHUB="https://raw.githubusercontent.com/AMNS/Nightingale/refs/heads/develop/Resources"
+BMP_COUNT=0
+
+for bmp_file in "${BMP_FILES[@]}"; do
+    if [ ! -f "$BMP_DIR/$bmp_file" ]; then
+        echo "Downloading $bmp_file..."
+        wget -q --show-progress -O "$BMP_DIR/$bmp_file" "$BMP_GITHUB/$bmp_file" 2>/dev/null && ((BMP_COUNT++)) || \
+        echo "⚠ Could not download $bmp_file"
+    else
+        ((BMP_COUNT++))
+    fi
+done
+
+if [ $BMP_COUNT -eq 4 ]; then
+    echo -e "${GREEN}✓ BMP files ready${NC}"
+
+    # Create zip for easy downloading in Tiger
+    echo "Creating BMP zip for Tiger..."
+    cd "$WORK_DIR/shared"
+    zip -q -r "BMPFileDistribution.zip" "BMP" 2>/dev/null
+    SIZE=$(ls -lh "BMPFileDistribution.zip" 2>/dev/null | awk '{print $5}')
+    echo -e "${GREEN}✓ Created BMPFileDistribution.zip ($SIZE)${NC}"
+
+    echo ""
+    echo "To install BMP files inside Tiger:"
+    echo "  1. Safari → http://10.0.2.2:8000"
+    echo "  2. Download BMPFileDistribution.zip"
+    echo "  3. Unzip and copy 4 .bmp files to /Library/Application Support/"
+    echo "  4. Restart Nightingale"
+else
+    echo -e "${YELLOW}⚠ Only $BMP_COUNT/4 BMP files available${NC}"
+    echo "  Nightingale may work without them (will use default UI)"
+fi
+
+# =============================================================================
+# Music fonts (Sonata + Briard)
+# =============================================================================
+
+echo ""
+echo -e "${YELLOW}Music fonts${NC}"
+
+# Briard font (free alternative to Sonata)
+BRIARD_FILE="$WORK_DIR/shared/Briard.ttf"
+if [ ! -f "$BRIARD_FILE" ]; then
+    echo "Downloading Briard font..."
+    wget -q --show-progress -O "$BRIARD_FILE" \
+        "https://fxmahoney.com/?smd_process_download=1&download_id=408" 2>/dev/null && \
+    echo -e "${GREEN}✓ Briard.ttf ready${NC}" || \
+    echo -e "${YELLOW}⚠ Could not download Briard${NC}"
+else
+    echo -e "${GREEN}✓ Briard.ttf ready${NC}"
+fi
+
+# Sonata font (user-provided, optional)
 if [ -f "$WORK_DIR/shared/Sonata.ttf" ]; then
     SIZE=$(ls -lh "$WORK_DIR/shared/Sonata.ttf" | awk '{print $5}')
     echo -e "${GREEN}✓ Sonata.ttf ready ($SIZE)${NC}"
 else
     echo "⚠ Place Sonata.ttf in: nightingale_emu/shared/"
-    echo "  (will be served via HTTP at http://10.0.2.2:8000)"
+    echo "  (optional, Briard is a free alternative)"
 fi
 
 # =============================================================================
