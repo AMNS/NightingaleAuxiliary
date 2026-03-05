@@ -1,0 +1,6 @@
+# Nightingale QEMU Emulator - Generated files (recreated on first run)
+nightingale_emu/
+
+# macOS
+.DS_Store
+*.swp
